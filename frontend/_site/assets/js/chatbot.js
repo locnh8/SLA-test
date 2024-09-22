@@ -1,6 +1,81 @@
-document.addEventListener("DOMContentLoaded", function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    let userId = "";
+    let lastUserMessage = "";
+    let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
+    let timeoutId = null;
 
-      // Create chat icon
+    // Function để lấy ID từ server
+    function getUserId() {
+        const apiUrl = `http://34.42.50.81:8888/connect`; // Đường dẫn API của bạn
+
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                console.log('User ID:', data.status);
+                userId = data.status; // Lưu ID vào biến userId để sử dụng sau
+                localStorage.setItem('uid', userId);
+            })
+            .catch(error => {
+                console.error('Error fetching user ID:', error);
+                // Bạn có thể thêm xử lý lỗi ở đây, ví dụ: hiển thị thông báo cho người dùng
+            });
+    }
+
+    userId = localStorage.getItem('uid');
+    if (userId) {
+    console.log('User ID from localStorage:', userId);
+    } else {
+    getUserId();
+    }
+
+    //disconnect
+    function handleDisconnect() {
+          if (userId) {
+              navigator.sendBeacon(`http://34.42.50.81:8888/disconnect?uid=${userId}`);
+              console.log('Disconnected from server');
+              localStorage.removeItem('uid');
+              localStorage.removeItem('chatHistory');
+          }
+      }
+
+      window.addEventListener('pagehide', function (event) {
+        if (event.persisted === false) {
+            resetTimeout(); // Đặt lại timeout
+        }
+    });
+
+    function startTimeout() {
+      timeoutId = setTimeout(() => {
+          console.log('5 minutes passed without pagehide, sending disconnect...');
+          handleDisconnect();
+      },  60 * 1000); // 5 phút
+  }
+
+  function resetTimeout() {
+      clearTimeout(timeoutId); // Xóa timeout cũ
+      startTimeout(); // Bắt đầu lại timeout
+  }
+
+  startTimeout(); // Khởi động timeout lần đầu
+
+    function saveChatHistory(message, isUserMessage = true) {
+      const messageObj = { text: message, isUserMessage };
+      chatHistory.push(messageObj); // Thêm tin nhắn vào lịch sử
+      localStorage.setItem('chatHistory', JSON.stringify(chatHistory)); // Lưu vào localStorage
+    }
+
+    // Khôi phục lịch sử chat khi trang tải lại
+    function restoreChatHistory() {
+      chatHistory.forEach(msg => {
+          if (msg.isUserMessage) {
+              displayUserMessage(msg.text);
+          } else {
+              displayAIMessage(msg.text);
+          }
+      });
+    }
+
+    // Tạo icon chat
     const chatIcon = document.createElement('div');
     chatIcon.id = 'chat-icon';
     chatIcon.style = `
@@ -20,7 +95,7 @@ document.addEventListener("DOMContentLoaded", function () {
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
       padding: 5px 0; 
       `;
-  
+
     const iconImage = document.createElement('img');
     iconImage.src = '/assets/images/chatbot.png';
     iconImage.alt = 'AI chat icon';
@@ -28,7 +103,7 @@ document.addEventListener("DOMContentLoaded", function () {
       width: 53px; 
       height: 55px; 
       `;
-  
+
     const iconText = document.createElement('span');
     iconText.innerText = 'Ask AI';
     iconText.style = `
@@ -39,12 +114,12 @@ document.addEventListener("DOMContentLoaded", function () {
       line-height: 1;
       margin-top: -3px; 
     `;
-  
+
     chatIcon.appendChild(iconImage);
     chatIcon.appendChild(iconText);
     document.body.appendChild(chatIcon);
     
-    // Create overlay
+    // Tạo overlay
     const overlay = document.createElement('div');
     overlay.id = 'overlay';
     overlay.style = `
@@ -59,7 +134,7 @@ document.addEventListener("DOMContentLoaded", function () {
       `;
     document.body.appendChild(overlay);
     
-      // Create chatbox
+    // Tạo chatbox
     const chatbox = document.createElement('div');
     chatbox.id = 'chatbox';
     chatbox.style = `
@@ -80,7 +155,7 @@ document.addEventListener("DOMContentLoaded", function () {
       `;
     document.body.appendChild(chatbox);
     
-      // Create chatbox header
+    // Tạo header cho chatbox
     const chatHeader = document.createElement('div');
     chatHeader.style = `
       padding: 13px;
@@ -131,7 +206,7 @@ document.addEventListener("DOMContentLoaded", function () {
     chatHeader.appendChild(closeButton);
     chatbox.appendChild(chatHeader);
     
-    // Create chat messages container
+    // Tạo container cho tin nhắn
     const chatMessages = document.createElement('div');
     chatMessages.style = `
       flex: 1;
@@ -144,7 +219,7 @@ document.addEventListener("DOMContentLoaded", function () {
       `;
     chatbox.appendChild(chatMessages);
     
-    // Add a note to the chatbox
+    // Thêm ghi chú vào chatbox
     const note = document.createElement('div');
     note.innerText = 'This is a custom LLM for answering questions about SVUIT - MMTT. Answers are based on the contents of the documentation.';
     note.style = `
@@ -162,7 +237,7 @@ document.addEventListener("DOMContentLoaded", function () {
       `;
     chatMessages.appendChild(note);
     
-    // Create chat input wrapper
+    // Tạo wrapper cho input
     const chatInputWrapper = document.createElement('div');
     chatInputWrapper.style = `
       display: flex;
@@ -175,7 +250,7 @@ document.addEventListener("DOMContentLoaded", function () {
       `;
     chatbox.appendChild(chatInputWrapper);
     
-    // Create chat input
+    // Tạo input cho tin nhắn
     const chatInput = document.createElement('textarea');
     chatInput.style = `
       flex: 1;
@@ -197,7 +272,7 @@ document.addEventListener("DOMContentLoaded", function () {
     chatInputWrapper.appendChild(chatInput);
     chatInput.placeholder = 'Ask me a question';
     
-    // Create chat button
+    // Tạo nút gửi tin nhắn
     const chatButton = document.createElement('button');
     chatButton.innerText = '➙';
     chatButton.style = `
@@ -214,7 +289,7 @@ document.addEventListener("DOMContentLoaded", function () {
     chatInputWrapper.appendChild(chatButton);
     
     chatButton.addEventListener('click', sendMessage);
-  
+
     chatInput.addEventListener('keydown', function (event) {
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
@@ -230,8 +305,8 @@ document.addEventListener("DOMContentLoaded", function () {
         setTimeout(() => chatInput.focus(), 0); 
       }
     });
-  
-    // Function to show loader
+
+    // Hàm hiển thị loader
     function showLoader() {
       const loader = document.createElement('div');
       loader.id = 'loader';
@@ -257,26 +332,26 @@ document.addEventListener("DOMContentLoaded", function () {
         
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
-  
-    // Function to hide loader
+
+    // Hàm ẩn loader
     function hideLoader() {
       const loader = document.getElementById('loader');
       if (loader) {
         loader.remove();
       }
     }
-  
-    //Function to hide old refresh button
+
+    // Hàm ẩn các nút refresh cũ
     function hidePreviousRefreshButtons() {
       const allRefreshButtons = chatMessages.querySelectorAll('button i.fa-refresh');
       allRefreshButtons.forEach(button => {
-          button.parentElement.style.display = 'none'; // Hide button
-          button.parentElement.style.pointerEvents = 'none'; // Prevent interaction
+          button.parentElement.style.display = 'none'; // Ẩn nút
+          button.parentElement.style.pointerEvents = 'none'; // Ngăn chặn tương tác
       });
     }
     
-  
-    //Function to activate button
+
+    // Hàm kích hoạt nút (hiệu ứng nhấp nháy)
     function activateButton(button) {
       const originalBackgroundColor = button.style.backgroundColor;
       const originalColor = button.style.color;
@@ -289,14 +364,37 @@ document.addEventListener("DOMContentLoaded", function () {
         button.style.color = originalColor;
       }, 200);
     }
-  
-    // Function to send message
+
+    // Hàm gửi tin nhắn
     function sendMessage() {
       const userMessage = chatInput.value;
       if (userMessage.trim()) {
-        // Display user's message
-        const userMessageElem = document.createElement('div');
-        userMessageElem.style = `
+        lastUserMessage = userMessage;
+        chatInput.value = '';
+
+        displayUserMessage(userMessage);
+        saveChatHistory(userMessage, true);
+
+        chatInput.style.height = '20px';
+        adjustChatboxHeight();
+        showLoader();
+        hidePreviousRefreshButtons();
+    
+        // Gửi tin nhắn tới server qua API kèm theo ID
+        if (userId) {
+            sendToServer(userId, userMessage);
+        } else {
+            console.error('User ID chưa được lấy từ server.');
+            hideLoader();
+            displayAIMessage("Error: Unable to get User ID. Please try again.");
+        }
+      }
+    }
+
+     // Hiển thị tin nhắn từ người dùng
+     function displayUserMessage(message) {
+      const userMessageElem = document.createElement('div');
+      userMessageElem.style = `
           display: inline-block;
           max-width: 90%;
           margin-bottom: 10px;
@@ -309,20 +407,14 @@ document.addEventListener("DOMContentLoaded", function () {
           font-size: 14px;
           text-align: left;
           align-self: flex-end;
-          z-index: 1000;  
-          `;
-        userMessageElem.innerText = userMessage;
-        chatMessages.appendChild(userMessageElem);
-        chatInput.value = '';
-    
-        chatInput.style.height = '20px';
-        adjustChatboxHeight();
-        showLoader();
-        hidePreviousRefreshButtons();
-      }
-    }
+          z-index: 1000;
+      `;
+      userMessageElem.innerText = message;
+      chatMessages.appendChild(userMessageElem);
+      saveChatHistory(message, false);
+  }
       
-    //Display AI message
+    // Hàm hiển thị tin nhắn từ AI
     function displayAIMessage(message) {
       const aiMessageElem = document.createElement('div');
       aiMessageElem.style = `
@@ -340,7 +432,7 @@ document.addEventListener("DOMContentLoaded", function () {
         box-sizing: border-box;
         `;
       aiMessageElem.innerHTML = marked.parse(message); 
-  
+
       const codeBlocks = aiMessageElem.querySelectorAll('code');
       codeBlocks.forEach(block => {
           block.style = `
@@ -357,7 +449,7 @@ document.addEventListener("DOMContentLoaded", function () {
       
       chatMessages.appendChild(aiMessageElem);
       
-      // Create container for copy and refresh button
+      // Tạo container cho nút copy và refresh
       const buttonContainer = document.createElement('div');
       buttonContainer.style = `
         display: flex;
@@ -367,7 +459,7 @@ document.addEventListener("DOMContentLoaded", function () {
         z-index: 1000;
         `;
       
-      //Create copy button
+      // Tạo nút copy
       const copyButton = document.createElement('button');
       copyButton.innerHTML = '<i class="fa fa-copy"></i>';
       copyButton.style = `
@@ -383,29 +475,29 @@ document.addEventListener("DOMContentLoaded", function () {
         margin-left: 5px;
         `;
       
-        copyButton.addEventListener('click', function () {
-          activateButton(copyButton);
-          const messageToCopy = aiMessageElem.innerText.trim();
-        
-          const textArea = document.createElement('textarea');
-          textArea.value = messageToCopy;
-          textArea.style.position = 'fixed';  
-          textArea.style.opacity = '0';
-          document.body.appendChild(textArea);
-        
-          textArea.select();
-        
-          try {
-              document.execCommand('copy');
-          } catch (error) {
-              alert('An error occurred while copying. Try again.');
-          }
+      copyButton.addEventListener('click', function () {
+        activateButton(copyButton);
+        const messageToCopy = aiMessageElem.innerText.trim();
       
-          document.body.removeChild(textArea);
-        });
+        const textArea = document.createElement('textarea');
+        textArea.value = messageToCopy;
+        textArea.style.position = 'fixed';  
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+      
+        textArea.select();
+      
+        try {
+            document.execCommand('copy');
+        } catch (error) {
+            alert('An error occurred while copying. Try again.');
+        }
+    
+        document.body.removeChild(textArea);
+      });
         
       
-      // Create refresh button
+      // Tạo nút refresh
       const refreshButton = document.createElement('button');
       refreshButton.innerHTML = '<i class="fa fa-refresh"></i>';
       refreshButton.style = `
@@ -424,16 +516,17 @@ document.addEventListener("DOMContentLoaded", function () {
       refreshButton.addEventListener('click', function () {
         activateButton(refreshButton);
         showLoader();
-        socket.emit('repeat');
+        const messageToSend = lastUserMessage + "Answer this question again.";
+        sendToServer(userId, messageToSend);
       });
       
       buttonContainer.appendChild(copyButton);
       buttonContainer.appendChild(refreshButton);
       chatMessages.appendChild(buttonContainer);
-  
-     // add separator visibility: hidden;
-     const separator = document.createElement('hr');
-     separator.style =`
+
+    // Thêm separator với visibility: hidden;
+    const separator = document.createElement('hr');
+    separator.style =`
       border: none;
       border-top: 1px solid #333; 
       margin-top: 10px;
@@ -441,20 +534,20 @@ document.addEventListener("DOMContentLoaded", function () {
       width: 100%;
       visibility: hidden;
       `;
-     chatMessages.appendChild(separator);
+    chatMessages.appendChild(separator);
       
       chatMessages.scrollTop = chatMessages.scrollHeight;
-  
+
       hidePreviousRefreshButtons();
-  
-      // Display the refresh button for the current message
+
+      // Hiển thị nút refresh cho tin nhắn hiện tại
       refreshButton.style.display = 'inline-block';
       refreshButton.style.pointerEvents = 'auto';
       
       adjustChatboxHeight();
     }
       
-    // Custom scrollbar chatbox styling
+    // Thêm style cho scrollbar của chatbox
     const style = document.createElement('style');
     style.innerHTML = `
       #chatbox ::-webkit-scrollbar {
@@ -477,7 +570,7 @@ document.addEventListener("DOMContentLoaded", function () {
       `;
     document.head.appendChild(style);
       
-    //auto resize
+    // Hàm tự động điều chỉnh kích thước chatbox
     function adjustChatboxHeight() {
       chatInput.style.height = '20px'; 
       chatInput.style.height = chatInput.scrollHeight + 'px';
@@ -497,10 +590,10 @@ document.addEventListener("DOMContentLoaded", function () {
       chatbox.style.height = newChatboxHeight + 'px';
       chatMessages.style.maxHeight = (newChatboxHeight - chatInputWrapperHeight - chatHeaderHeight) + 'px';
     }
-  
-    //Reset size
+
+    // Hàm reset kích thước chatbox
     function resetChatboxHeight() {
-      if (chatMessages.children.length === 1) { // Only the note exists
+      if (chatMessages.children.length === 1) { // Chỉ còn ghi chú
         chatbox.style.height = '300px'; 
         chatMessages.style.maxHeight = '200px'; 
       }
@@ -514,12 +607,40 @@ document.addEventListener("DOMContentLoaded", function () {
         adjustChatboxHeight();
       }
     });
-  
+
     chatInput.addEventListener('focus', function () {
       adjustChatboxHeight();
     });
+
+    // Hàm gửi dữ liệu tới server qua HTTP API
+    function sendToServer(userId, userMessage) {
+        const apiUrl = `http://34.42.50.81:8888/client_event?uid=${userId}`; // Đường dẫn API của bạn để gửi tin nhắn
+
+        // Dữ liệu gửi đi
+        const data = {
+            data: userMessage
+        };
+
+        // Gửi yêu cầu POST với fetch
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json' // Định dạng dữ liệu JSON
+            },
+            body: JSON.stringify(data) // Chuyển đổi dữ liệu thành chuỗi JSON
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data.message);
+            hideLoader();
+            displayAIMessage(data.message); // Hiển thị phản hồi từ AI (trả về từ server)
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            hideLoader();
+            displayAIMessage("Error: Unable to send message. Please try again.");
+        });
+    }
+
+    restoreChatHistory();
   });
-  
-    
-  
-  
