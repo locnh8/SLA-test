@@ -6,7 +6,7 @@
 
     // Function để lấy ID từ server
     function getUserId() {
-        const apiUrl = `http://34.42.50.81:8888/connect`; // Đường dẫn API của bạn
+        const apiUrl = `http://35.238.176.124:8888/connect`; // Đường dẫn API của bạn
 
         fetch(apiUrl)
             .then(response => response.json())
@@ -31,7 +31,7 @@
     //disconnect
     function handleDisconnect() {
           if (userId) {
-              navigator.sendBeacon(`http://34.42.50.81:8888/disconnect?uid=${userId}`);
+              navigator.sendBeacon(`http://35.238.176.124:8888/disconnect?uid=${userId}`);
               console.log('Disconnected from server');
               localStorage.removeItem('uid');
               localStorage.removeItem('chatHistory');
@@ -48,7 +48,7 @@
       timeoutId = setTimeout(() => {
           console.log('5 minutes passed without pagehide, sending disconnect...');
           handleDisconnect();
-      }, 5 * 60 * 1000); // 5 phút
+      },  5 * 60 * 1000); // 5 phút
   }
 
   function resetTimeout() {
@@ -58,11 +58,11 @@
 
   startTimeout(); // Khởi động timeout lần đầu
 
-    function saveChatHistory(message, isUserMessage = true) {
-      const messageObj = { text: message, isUserMessage };
-      chatHistory.push(messageObj); // Thêm tin nhắn vào lịch sử
-      localStorage.setItem('chatHistory', JSON.stringify(chatHistory)); // Lưu vào localStorage
-    }
+  function saveChatHistory(message, isUserMessage = true) {
+    const messageObj = { text: message, isUserMessage };
+    chatHistory.push(messageObj); // Thêm tin nhắn vào lịch sử
+    localStorage.setItem('chatHistory', JSON.stringify(chatHistory)); // Lưu vào localStorage
+  }
 
     // Khôi phục lịch sử chat khi trang tải lại
     function restoreChatHistory() {
@@ -411,7 +411,6 @@
       `;
       userMessageElem.innerText = message;
       chatMessages.appendChild(userMessageElem);
-      saveChatHistory(message, false);
   }
       
     // Hàm hiển thị tin nhắn từ AI
@@ -448,6 +447,8 @@
       });
       
       chatMessages.appendChild(aiMessageElem);
+
+      saveChatHistory(message, false);
       
       // Tạo container cho nút copy và refresh
       const buttonContainer = document.createElement('div');
@@ -614,7 +615,7 @@
 
     // Hàm gửi dữ liệu tới server qua HTTP API
     function sendToServer(userId, userMessage) {
-        const apiUrl = `http://34.42.50.81:8888/client_event?uid=${userId}`; // Đường dẫn API của bạn để gửi tin nhắn
+        const apiUrl = `http://35.238.176.124:8888/client_event?uid=${userId}`; // Đường dẫn API của bạn để gửi tin nhắn
 
         // Dữ liệu gửi đi
         const data = {
