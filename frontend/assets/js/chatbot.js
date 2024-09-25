@@ -2,6 +2,9 @@
     let userId = "";
     let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
     let timeoutId = null;
+    let lastUserMessage = "";
+    let disconnectPending = false;
+    let refresh_click = false;
 
     // Function để lấy ID từ server
     function getUserId() {
@@ -29,25 +32,24 @@
 
     //disconnect
     function handleDisconnect() {
-          if (userId) {
-              navigator.sendBeacon(`http://35.238.176.124:8888/disconnect?uid=${userId}`);
+      console.log('handleDisconnect called');
+      if (userId) {
+          const sent = navigator.sendBeacon(`http://35.238.176.124:8888/disconnect?uid=${userId}`);
+          if (sent) {
               console.log('Disconnected from server');
-              localStorage.removeItem('uid');
-              localStorage.removeItem('chatHistory');
+          } else {
+              console.log('Failed to send disconnect signal');
           }
+          localStorage.removeItem('uid');
+          localStorage.removeItem('chatHistory');
       }
-
-      window.addEventListener('pagehide', function (event) {
-        if (event.persisted === false) {
-            resetTimeout(); // Đặt lại timeout
-        }
-    });
+  }
 
     function startTimeout() {
       timeoutId = setTimeout(() => {
           console.log('5 minutes passed without pagehide, sending disconnect...');
           handleDisconnect();
-      },  5 * 60 * 1000); // 5 phút
+      },  7 * 60 * 1000); // 5 phút
   }
 
   function resetTimeout() {
@@ -55,7 +57,19 @@
       startTimeout(); // Bắt đầu lại timeout
   }
 
-  startTimeout(); // Khởi động timeout lần đầu
+// Sự kiện trước khi người dùng rời khỏi trang
+window.addEventListener('beforeunload', function (event) {
+  console.log('beforeunload event fired');
+  if (!disconnectPending) {
+      disconnectPending = true; // Đánh dấu rằng ngắt kết nối đang chờ
+      // Thiết lập timeout cho ngắt kết nối
+      startTimeout();
+  }
+});
+
+window.addEventListener('mousemove', resetTimeout);
+window.addEventListener('keydown', resetTimeout);
+window.addEventListener('click', resetTimeout);
 
   function saveChatHistory(message, isUserMessage = true) {
     const messageObj = { text: message, isUserMessage };
@@ -63,16 +77,15 @@
     localStorage.setItem('chatHistory', JSON.stringify(chatHistory)); // Lưu vào localStorage
   }
 
-    // Khôi phục lịch sử chat khi trang tải lại
-    function restoreChatHistory() {
-      chatHistory.forEach(msg => {
-          if (msg.isUserMessage) {
-              displayUserMessage(msg.text);
-          } else {
-              displayAIMessage(msg.text);
-          }
-      });
-    }
+  function restoreChatHistory() {
+    chatHistory.forEach(msg => {
+      if (msg.isUserMessage) {
+        displayUserMessage(msg.text);
+      } else {
+        displayAIMessage(msg.text);
+      }
+    });
+  }
 
     // Tạo icon chat
     const chatIcon = document.createElement('div');
@@ -447,7 +460,10 @@
       
       chatMessages.appendChild(aiMessageElem);
 
-      saveChatHistory(message, false);
+       // Chỉ lưu tin nhắn từ AI nếu có tin nhắn mới từ người dùng
+      if (lastUserMessage.trim() !== "" || refresh_click) {
+      saveChatHistory(message, false); // Lưu vào localStorage
+      }
       
       // Tạo container cho nút copy và refresh
       const buttonContainer = document.createElement('div');
@@ -514,6 +530,7 @@
         `;
       
       refreshButton.addEventListener('click', function () {
+        refresh_click = true;
         activateButton(refreshButton);
         showLoader();
         repeat();
@@ -611,6 +628,22 @@
       adjustChatboxHeight();
     });
 
+    function repeat() {   
+      // Tìm tin nhắn gần nhất của người dùng
+      const lastUserMess = chatHistory.reverse().find(msg => msg.isUserMessage);
+    
+      if (lastUserMess) {
+        // Tạo tin nhắn mới với câu hỏi bổ sung
+        const newMessage = lastUserMess.text + " Hãy trả lời lại câu hỏi này.";
+        
+        // Gọi hàm sendToServer với tin nhắn mới
+        sendToServer(userId, newMessage);
+      } else {
+        console.error("Không tìm thấy tin nhắn gần nhất từ người dùng.");
+        displayAIMessage("Không tìm thấy tin nhắn gần nhất để lặp lại.");
+      }
+    }
+
     // Hàm gửi dữ liệu tới server qua HTTP API
     function sendToServer(userId, userMessage) {
         const apiUrl = `http://35.238.176.124:8888/client_event?uid=${userId}`; // Đường dẫn API của bạn để gửi tin nhắn
@@ -657,7 +690,5 @@
               displayAIMessage("Error: Unable to process repeat request. Please try again.");  // Thông báo lỗi cho người dùng
           });
     }
-  
-
     restoreChatHistory();
   });
