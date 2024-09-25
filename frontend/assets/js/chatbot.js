@@ -1,12 +1,11 @@
   document.addEventListener("DOMContentLoaded", function () {
     let userId = "";
-    let lastUserMessage = "";
     let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
     let timeoutId = null;
 
     // Function để lấy ID từ server
     function getUserId() {
-        const apiUrl = `http://35.238.176.124:8888/connect`; // Đường dẫn API của bạn
+        const apiUrl = 'http://35.238.176.124:8888/connect'; // Đường dẫn API của bạn
 
         fetch(apiUrl)
             .then(response => response.json())
@@ -517,8 +516,7 @@
       refreshButton.addEventListener('click', function () {
         activateButton(refreshButton);
         showLoader();
-        const messageToSend = lastUserMessage + "Answer this question again.";
-        sendToServer(userId, messageToSend);
+        repeat();
       });
       
       buttonContainer.appendChild(copyButton);
@@ -642,6 +640,24 @@
             displayAIMessage("Error: Unable to send message. Please try again.");
         });
     }
+
+    function repeat() {
+      const apiUrl = `http://35.238.176.124:8888/repeat?uid=${userId}`; // Đường dẫn API của bạn
+  
+      fetch(apiUrl)
+          .then(response => response.json())
+          .then(data => {
+              console.log('Success:', data.message);
+              hideLoader();  // Ẩn loader khi nhận được phản hồi từ server
+              displayAIMessage(data.message);  // Hiển thị tin nhắn từ server
+          })
+          .catch(error => {
+              console.error('Error:', error);
+              hideLoader();  // Ẩn loader nếu có lỗi xảy ra
+              displayAIMessage("Error: Unable to process repeat request. Please try again.");  // Thông báo lỗi cho người dùng
+          });
+    }
+  
 
     restoreChatHistory();
   });
