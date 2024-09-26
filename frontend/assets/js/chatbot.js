@@ -49,7 +49,7 @@
       timeoutId = setTimeout(() => {
           console.log('5 minutes passed without pagehide, sending disconnect...');
           handleDisconnect();
-      },  7 * 60 * 1000); // 5 phút
+      },  2 * 60 * 1000); // 5 phút
   }
 
   function resetTimeout() {
@@ -628,21 +628,26 @@ window.addEventListener('click', resetTimeout);
       adjustChatboxHeight();
     });
 
-    function repeat() {   
+    function repeat() {
+      // Tạo bản sao của chatHistory trước khi đảo ngược
+      const cloneChatHistory = [...chatHistory];
+  
       // Tìm tin nhắn gần nhất của người dùng
-      const lastUserMess = chatHistory.reverse().find(msg => msg.isUserMessage);
-    
+      const lastUserMess = cloneChatHistory.reverse().find(msg => msg.isUserMessage);
+  
       if (lastUserMess) {
-        // Tạo tin nhắn mới với câu hỏi bổ sung
-        const newMessage = lastUserMess.text + " Hãy trả lời lại câu hỏi này.";
-        
-        // Gọi hàm sendToServer với tin nhắn mới
-        sendToServer(userId, newMessage);
+          // Tạo tin nhắn mới với câu hỏi bổ sung
+          const newMessage = lastUserMess.text + " Hãy trả lời lại câu hỏi này.";
+          
+          // Gọi hàm sendToServer với tin nhắn mới
+          sendToServer(userId, newMessage);
       } else {
-        console.error("Không tìm thấy tin nhắn gần nhất từ người dùng.");
-        displayAIMessage("Không tìm thấy tin nhắn gần nhất để lặp lại.");
+          console.error("Không tìm thấy tin nhắn gần nhất từ người dùng.");
+          displayAIMessage("Không tìm thấy tin nhắn gần nhất để lặp lại.");
       }
-    }
+  
+  }
+  
 
     // Hàm gửi dữ liệu tới server qua HTTP API
     function sendToServer(userId, userMessage) {
@@ -672,23 +677,6 @@ window.addEventListener('click', resetTimeout);
             hideLoader();
             displayAIMessage("Error: Unable to send message. Please try again.");
         });
-    }
-
-    function repeat() {
-      const apiUrl = `http://35.238.176.124:8888/repeat?uid=${userId}`; // Đường dẫn API của bạn
-  
-      fetch(apiUrl)
-          .then(response => response.json())
-          .then(data => {
-              console.log('Success:', data.message);
-              hideLoader();  // Ẩn loader khi nhận được phản hồi từ server
-              displayAIMessage(data.message);  // Hiển thị tin nhắn từ server
-          })
-          .catch(error => {
-              console.error('Error:', error);
-              hideLoader();  // Ẩn loader nếu có lỗi xảy ra
-              displayAIMessage("Error: Unable to process repeat request. Please try again.");  // Thông báo lỗi cho người dùng
-          });
     }
     restoreChatHistory();
   });
