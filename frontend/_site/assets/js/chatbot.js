@@ -1,9 +1,8 @@
   document.addEventListener("DOMContentLoaded", function () {
     let userId = "";
     let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
-    let timeoutId = null;
     let lastUserMessage = "";
-    let disconnectPending = false;
+    let isDisconnecting = JSON.parse(localStorage.getItem('isDisconnecting')) || false;
     let refresh_click = false;
 
     // Function để lấy ID từ server
@@ -33,6 +32,9 @@
     //disconnect
     function handleDisconnect() {
       console.log('handleDisconnect called');
+      if (!isDisconnecting){
+        return;
+      } // Ngăn gửi tín hiệu ngắt kết nối nhiều lần
       if (userId) {
           const sent = navigator.sendBeacon(`http://35.238.176.124:8888/disconnect?uid=${userId}`);
           if (sent) {
@@ -42,34 +44,23 @@
           }
           localStorage.removeItem('uid');
           localStorage.removeItem('chatHistory');
+          localStorage.removeItem('isDisconnecting');
       }
-  }
+    }
 
-    function startTimeout() {
-      timeoutId = setTimeout(() => {
-          console.log('5 minutes passed without pagehide, sending disconnect...');
-          handleDisconnect();
-      },  2 * 60 * 1000); // 5 phút
-  }
+  // Lắng nghe sự kiện beforeunload
+  window.addEventListener('unload', function (event) {
+    // Gửi tín hiệu disconnect khi người dùng rời khỏi trang
+    handleDisconnect();
+    localStorage.setItem('isDisconnecting', JSON.stringify(true));
+  });
 
-  function resetTimeout() {
-      clearTimeout(timeoutId); // Xóa timeout cũ
-      startTimeout(); // Bắt đầu lại timeout
-  }
-
-// Sự kiện trước khi người dùng rời khỏi trang
-window.addEventListener('beforeunload', function (event) {
-  console.log('beforeunload event fired');
-  if (!disconnectPending) {
-      disconnectPending = true; // Đánh dấu rằng ngắt kết nối đang chờ
-      // Thiết lập timeout cho ngắt kết nối
-      startTimeout();
-  }
+  // Lắng nghe sự kiện click trong trang
+  document.addEventListener('click', function () {
+    // Gán isDisconnecting thành false khi có click
+    isDisconnecting = false;
+    localStorage.setItem('isDisconnecting', JSON.stringify(false));
 });
-
-window.addEventListener('mousemove', resetTimeout);
-window.addEventListener('keydown', resetTimeout);
-window.addEventListener('click', resetTimeout);
 
   function saveChatHistory(message, isUserMessage = true) {
     const messageObj = { text: message, isUserMessage };
