@@ -1,73 +1,73 @@
-  document.addEventListener("DOMContentLoaded", function () {
-    let userId = "";
-    let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
-    let lastUserMessage = "";
-    let isDisconnecting = JSON.parse(localStorage.getItem('isDisconnecting')) || true;
-    let refresh_click = false;
+document.addEventListener("DOMContentLoaded", function () {
+  let userId = "";
+  let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
+  let lastUserMessage = "";
+  let isDisconnecting = JSON.parse(localStorage.getItem('isDisconnecting')) || true;
+  let refresh_click = false;
 
-    // Function để lấy ID từ server
-    function getUserId() {
-        const apiUrl = 'http://35.238.176.124:8888/connect'; // Đường dẫn API của bạn
+  //Lấy userID.
+  function getUserId() {
+    const apiUrl = 'http://35.238.176.124:8888/connect';
 
-        fetch(apiUrl)
-            .then(response => response.json())
-            .then(data => {
-                console.log('User ID:', data.status);
-                userId = data.status; // Lưu ID vào biến userId để sử dụng sau
-                localStorage.setItem('uid', userId);
-            })
-            .catch(error => {
-                console.error('Error fetching user ID:', error);
-                // Bạn có thể thêm xử lý lỗi ở đây, ví dụ: hiển thị thông báo cho người dùng
-            });
+    fetch(apiUrl)
+      .then(response => response.json())
+      .then(data => {
+        console.log('User ID:', data.status);
+        userId = data.status;
+        localStorage.setItem('uid', userId);
+      })
+      .catch(error => {
+        console.error('Error fetching user ID:', error);
+      });
+  }
+  //Nếu đã có userID trong storage thì lấy, ngược lại sẽ gọi hàm lấy userID.
+  userId = localStorage.getItem('uid');
+  if (userId) {
+  console.log('User ID from localStorage:', userId);
+  } else {
+  getUserId();
+  }
+
+  //Đóng kết nối
+  function handleDisconnect() {
+    console.log('handleDisconnect called');
+    if (!isDisconnecting){
+      return;
     }
-
-    userId = localStorage.getItem('uid');
     if (userId) {
-    console.log('User ID from localStorage:', userId);
-    } else {
-    getUserId();
-    }
-
-    //disconnect
-    function handleDisconnect() {
-      console.log('handleDisconnect called');
-      if (!isDisconnecting){
-        return;
-      } // Ngăn gửi tín hiệu ngắt kết nối nhiều lần
-      if (userId) {
-          const sent = navigator.sendBeacon(`http://35.238.176.124:8888/disconnect?uid=${userId}`);
-          if (sent) {
-              console.log('Disconnected from server');
-          } else {
-              console.log('Failed to send disconnect signal');
-          }
-          localStorage.removeItem('uid');
-          localStorage.removeItem('chatHistory');
-          localStorage.removeItem('isDisconnecting');
+      const sent = navigator.sendBeacon(`http://35.238.176.124:8888/disconnect?uid=${userId}`);
+      if (sent) {
+        console.log('Disconnected from server');
+      } else {
+        console.log('Failed to send disconnect signal');
       }
-    }
 
-  // Lắng nghe sự kiện beforeunload
-  window.addEventListener('unload', function (event) {
-    // Gửi tín hiệu disconnect khi người dùng rời khỏi trang
+      localStorage.removeItem('uid');
+      localStorage.removeItem('chatHistory');
+      localStorage.removeItem('isDisconnecting');
+    }
+  }
+
+  //Tín hiệu khi người dùng đóng web.
+  window.addEventListener('beforeunload', function (event) {
     handleDisconnect();
     localStorage.setItem('isDisconnecting', JSON.stringify(true));
   });
 
-  // Lắng nghe sự kiện click trong trang
+  //Hành động click trong web.
   document.addEventListener('click', function () {
-    // Gán isDisconnecting thành false khi có click
     isDisconnecting = false;
     localStorage.setItem('isDisconnecting', JSON.stringify(false));
-});
+  });
 
+  //Lưu lịch sử chat vào storage.
   function saveChatHistory(message, isUserMessage = true) {
     const messageObj = { text: message, isUserMessage };
     chatHistory.push(messageObj); // Thêm tin nhắn vào lịch sử
     localStorage.setItem('chatHistory', JSON.stringify(chatHistory)); // Lưu vào localStorage
   }
 
+  //Hiển thị lịch sử chat từ storage.
   function restoreChatHistory() {
     chatHistory.forEach(msg => {
       if (msg.isUserMessage) {
@@ -78,8 +78,8 @@
     });
   }
 
-    // Tạo icon chat
-    const chatIcon = document.createElement('div');
+  //Tạo icon chatbot.
+  const chatIcon = document.createElement('div');
     chatIcon.id = 'chat-icon';
     chatIcon.style = `
       position: fixed;
@@ -99,7 +99,7 @@
       padding: 5px 0; 
       `;
 
-    const iconImage = document.createElement('img');
+  const iconImage = document.createElement('img');
     iconImage.src = '/assets/images/chatbot.png';
     iconImage.alt = 'AI chat icon';
     iconImage.style = `
@@ -107,7 +107,7 @@
       height: 55px; 
       `;
 
-    const iconText = document.createElement('span');
+  const iconText = document.createElement('span');
     iconText.innerText = 'Ask AI';
     iconText.style = `
       font-family: Arial, sans-serif;
@@ -118,12 +118,12 @@
       margin-top: -3px; 
     `;
 
-    chatIcon.appendChild(iconImage);
-    chatIcon.appendChild(iconText);
-    document.body.appendChild(chatIcon);
+  chatIcon.appendChild(iconImage);
+  chatIcon.appendChild(iconText);
+  document.body.appendChild(chatIcon);
     
-    // Tạo overlay
-    const overlay = document.createElement('div');
+  // Tạo lớp phủ khi mở chatbot.
+  const overlay = document.createElement('div');
     overlay.id = 'overlay';
     overlay.style = `
       position: fixed;
@@ -135,10 +135,10 @@
       display: none;
       z-index: 999;
       `;
-    document.body.appendChild(overlay);
+  document.body.appendChild(overlay);
     
-    // Tạo chatbox
-    const chatbox = document.createElement('div');
+  //Tạo chatbox.
+  const chatbox = document.createElement('div');
     chatbox.id = 'chatbox';
     chatbox.style = `
       position: fixed;
@@ -156,10 +156,10 @@
       z-index: 1000;
       overflow: hidden;
       `;
-    document.body.appendChild(chatbox);
+  document.body.appendChild(chatbox);
     
-    // Tạo header cho chatbox
-    const chatHeader = document.createElement('div');
+  //Tạo header cho chatbox.
+  const chatHeader = document.createElement('div');
     chatHeader.style = `
       padding: 13px;
       background-color:#523AF0;
@@ -171,7 +171,7 @@
       border-top-right-radius: 5px;
       `;
     
-    const headerText = document.createElement('span');
+  const headerText = document.createElement('span');
     headerText.innerText = 'SVUIT - MMTT AI CHAT';
     headerText.style = `
       font-family: Arial, sans-serif;
@@ -180,7 +180,7 @@
       margin-left: 10px;
       `;
     
-    const closeButton = document.createElement('button');
+  const closeButton = document.createElement('button');
     closeButton.innerText = '×';
     closeButton.style = `
       margin-left: auto;
@@ -193,24 +193,24 @@
       display: flex;
       `;
     
-    closeButton.addEventListener('click', function () {
-      chatbox.style.display = 'none';
-      overlay.style.display = 'none';
-      resetChatboxHeight();
-    });
+  closeButton.addEventListener('click', function () {
+    chatbox.style.display = 'none';
+    overlay.style.display = 'none';
+    resetChatboxHeight();
+  });
     
-    overlay.addEventListener('click', function () {
-      chatbox.style.display = 'none';
-      overlay.style.display = 'none';
-      resetChatboxHeight();
-    });
+  overlay.addEventListener('click', function () {
+    chatbox.style.display = 'none';
+    overlay.style.display = 'none';
+    resetChatboxHeight();
+  });
     
-    chatHeader.appendChild(headerText);
-    chatHeader.appendChild(closeButton);
-    chatbox.appendChild(chatHeader);
+  chatHeader.appendChild(headerText);
+  chatHeader.appendChild(closeButton);
+  chatbox.appendChild(chatHeader);
     
-    // Tạo container cho tin nhắn
-    const chatMessages = document.createElement('div');
+  //Tạo container cho tin nhắn.
+  const chatMessages = document.createElement('div');
     chatMessages.style = `
       flex: 1;
       padding: 10px;
@@ -220,10 +220,10 @@
       align-items: flex-start;
       z-index: 1000;
       `;
-    chatbox.appendChild(chatMessages);
+  chatbox.appendChild(chatMessages);
     
-    // Thêm ghi chú vào chatbox
-    const note = document.createElement('div');
+  //Thêm ghi chú vào chatbox.
+  const note = document.createElement('div');
     note.innerText = 'This is a custom LLM for answering questions about SVUIT - MMTT. Answers are based on the contents of the documentation.';
     note.style = `
       background-color: #FFFFCC;
@@ -238,10 +238,10 @@
       display: block;
       z-index: 1000;
       `;
-    chatMessages.appendChild(note);
+  chatMessages.appendChild(note);
     
-    // Tạo wrapper cho input
-    const chatInputWrapper = document.createElement('div');
+  //Tạo wrapper cho input.
+  const chatInputWrapper = document.createElement('div');
     chatInputWrapper.style = `
       display: flex;
       align-items: center;
@@ -251,10 +251,10 @@
       margin: 10px;
       z-index: 1000;
       `;
-    chatbox.appendChild(chatInputWrapper);
+  chatbox.appendChild(chatInputWrapper);
     
-    // Tạo input cho tin nhắn
-    const chatInput = document.createElement('textarea');
+  //Tạo input cho tin nhắn.
+  const chatInput = document.createElement('textarea');
     chatInput.style = `
       flex: 1;
       padding: 10px;
@@ -272,11 +272,11 @@
       box-sizing: border-box;
       z-index: 1000;
       `;
-    chatInputWrapper.appendChild(chatInput);
-    chatInput.placeholder = 'Ask me a question';
+  chatInputWrapper.appendChild(chatInput);
+  chatInput.placeholder = 'Ask me a question';
     
-    // Tạo nút gửi tin nhắn
-    const chatButton = document.createElement('button');
+  //Tạo nút gửi tin nhắn.
+  const chatButton = document.createElement('button');
     chatButton.innerText = '➙';
     chatButton.style = `
       width: 32px;
@@ -289,29 +289,29 @@
       font-size: 20px;
       margin: 5px;
       `;
-    chatInputWrapper.appendChild(chatButton);
+  chatInputWrapper.appendChild(chatButton);
     
-    chatButton.addEventListener('click', sendMessage);
+  chatButton.addEventListener('click', sendMessage);
 
-    chatInput.addEventListener('keydown', function (event) {
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        sendMessage();
-      }
-    });
+  chatInput.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage();
+    }
+  });
     
-    chatIcon.addEventListener('click', function () {
-      chatbox.style.display = chatbox.style.display === 'none' ? 'flex' : 'none';
-      overlay.style.display = chatbox.style.display === 'none' ? 'none' : 'block';
-      if (chatbox.style.display === 'flex') {
-        resetChatboxHeight();
-        setTimeout(() => chatInput.focus(), 0); 
-      }
-    });
+  chatIcon.addEventListener('click', function () {
+    chatbox.style.display = chatbox.style.display === 'none' ? 'flex' : 'none';
+    overlay.style.display = chatbox.style.display === 'none' ? 'none' : 'block';
+    if (chatbox.style.display === 'flex') {
+      resetChatboxHeight();
+      setTimeout(() => chatInput.focus(), 0); 
+    }
+  });
 
-    // Hàm hiển thị loader
-    function showLoader() {
-      const loader = document.createElement('div');
+  //Hàm hiển thị loader.
+  function showLoader() {
+    const loader = document.createElement('div');
       loader.id = 'loader';
       loader.style = `
         display: inline-block;
@@ -323,141 +323,140 @@
         z-index: 1000;
         `;
     
-      const loaderImg = document.createElement('img');
+    const loaderImg = document.createElement('img');
       loaderImg.src = '/assets/images/loader.gif';
       loaderImg.style = `
         width: 55px;
         height: 57px;
         `;
     
-      loader.appendChild(loaderImg);
-      chatMessages.appendChild(loader);
+    loader.appendChild(loaderImg);
+    chatMessages.appendChild(loader);
         
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
 
-    // Hàm ẩn loader
-    function hideLoader() {
-      const loader = document.getElementById('loader');
-      if (loader) {
-        loader.remove();
+  //Hàm ẩn loader.
+  function hideLoader() {
+    const loader = document.getElementById('loader');
+    if (loader) {
+      loader.remove();
+    }
+  }
+
+  //Hàm ẩn các nút refresh cũ.
+  function hidePreviousRefreshButtons() {
+    const allRefreshButtons = chatMessages.querySelectorAll('button i.fa-refresh');
+    allRefreshButtons.forEach(button => {
+      button.parentElement.style.display = 'none'; 
+      button.parentElement.style.pointerEvents = 'none';
+    });
+  }
+    
+  //Hàm kích hoạt nút (hiệu ứng nhấp nháy).
+  function activateButton(button) {
+    const originalBackgroundColor = button.style.backgroundColor;
+    const originalColor = button.style.color;
+    
+    button.style.backgroundColor = '#d3d3d3'; 
+    button.style.color = '#000';
+    
+    setTimeout(() => {
+      button.style.backgroundColor = originalBackgroundColor;
+      button.style.color = originalColor;
+    }, 200);
+  }
+
+  //Hàm gửi tin nhắn.
+  function sendMessage() {
+    const userMessage = chatInput.value;
+    if (userMessage.trim()) {
+      lastUserMessage = userMessage;
+      chatInput.value = '';
+
+      displayUserMessage(userMessage);
+      saveChatHistory(userMessage, true);
+
+      chatInput.style.height = '20px';
+      adjustChatboxHeight();
+      showLoader();
+      hidePreviousRefreshButtons();
+    
+      //Gửi tin nhắn tới server.
+      if (userId) {
+        sendToServer(userId, userMessage);
+      } else {
+        console.error('User ID chưa được lấy từ server.');
+        hideLoader();
+        displayAIMessage("Error: Unable to get User ID. Please try again.");
       }
     }
+  }
 
-    // Hàm ẩn các nút refresh cũ
-    function hidePreviousRefreshButtons() {
-      const allRefreshButtons = chatMessages.querySelectorAll('button i.fa-refresh');
-      allRefreshButtons.forEach(button => {
-          button.parentElement.style.display = 'none'; // Ẩn nút
-          button.parentElement.style.pointerEvents = 'none'; // Ngăn chặn tương tác
-      });
-    }
-    
-
-    // Hàm kích hoạt nút (hiệu ứng nhấp nháy)
-    function activateButton(button) {
-      const originalBackgroundColor = button.style.backgroundColor;
-      const originalColor = button.style.color;
-    
-      button.style.backgroundColor = '#d3d3d3'; 
-      button.style.color = '#000';
-    
-      setTimeout(() => {
-        button.style.backgroundColor = originalBackgroundColor;
-        button.style.color = originalColor;
-      }, 200);
-    }
-
-    // Hàm gửi tin nhắn
-    function sendMessage() {
-      const userMessage = chatInput.value;
-      if (userMessage.trim()) {
-        lastUserMessage = userMessage;
-        chatInput.value = '';
-
-        displayUserMessage(userMessage);
-        saveChatHistory(userMessage, true);
-
-        chatInput.style.height = '20px';
-        adjustChatboxHeight();
-        showLoader();
-        hidePreviousRefreshButtons();
-    
-        // Gửi tin nhắn tới server qua API kèm theo ID
-        if (userId) {
-            sendToServer(userId, userMessage);
-        } else {
-            console.error('User ID chưa được lấy từ server.');
-            hideLoader();
-            displayAIMessage("Error: Unable to get User ID. Please try again.");
-        }
-      }
-    }
-
-     // Hiển thị tin nhắn từ người dùng
-     function displayUserMessage(message) {
-      const userMessageElem = document.createElement('div');
-      userMessageElem.style = `
-          display: inline-block;
-          max-width: 90%;
-          margin-bottom: 10px;
-          padding: 10px;
-          color: #fff;
-          font-weight: bold;
-          background-color: #6B68EE;
-          border-radius: 20px;
-          word-break: break-word;
-          font-size: 14px;
-          text-align: left;
-          align-self: flex-end;
-          z-index: 1000;
+  //Hiển thị tin nhắn từ người dùng.
+  function displayUserMessage(message) {
+    const userMessageElem = document.createElement('div');
+    userMessageElem.style = `
+      display: inline-block;
+      max-width: 90%;
+      margin-bottom: 10px;
+      padding: 10px;
+      color: #fff;
+      font-weight: bold;
+      background-color: #6B68EE;
+      border-radius: 20px;
+      word-break: break-word;
+      font-size: 14px;
+      text-align: left;
+      align-self: flex-end;
+      z-index: 1000;
       `;
-      userMessageElem.innerText = message;
-      chatMessages.appendChild(userMessageElem);
+    userMessageElem.innerText = message;
+    chatMessages.appendChild(userMessageElem);
   }
       
-    // Hàm hiển thị tin nhắn từ AI
-    function displayAIMessage(message) {
-      const aiMessageElem = document.createElement('div');
-      aiMessageElem.style = `
-        display: inline-block;
-        max-width: 90%;
-        padding: 5px 10px;
-        color: #000;
-        background-color: #D3D3D3;
-        border-radius: 20px;
-        font-size: 14px;
-        text-align: left;
-        word-break: break-word;
-        z-index: 1000;
-        align-self: flex-start;
-        box-sizing: border-box;
-        `;
-      aiMessageElem.innerHTML = marked.parse(message); 
+  //Hiển thị tin nhắn từ AI.
+  function displayAIMessage(message) {
+    const aiMessageElem = document.createElement('div');
+    aiMessageElem.style = `
+      display: inline-block;
+      max-width: 90%;
+      padding: 5px 10px;
+      color: #000;
+      background-color: #D3D3D3;
+      border-radius: 20px;
+      font-size: 14px;
+      text-align: left;
+      word-break: break-word;
+      z-index: 1000;
+      align-self: flex-start;
+      box-sizing: border-box;
+      `;
+    aiMessageElem.innerHTML = marked.parse(message); 
 
-      const codeBlocks = aiMessageElem.querySelectorAll('code');
+    //Nền cho code.
+    const codeBlocks = aiMessageElem.querySelectorAll('code');
       codeBlocks.forEach(block => {
-          block.style = `
-              display: inline-flex;
-              background-color: #222; 
-              color: #fff; 
-              padding: 5px;
-              border-radius: 5px;
-              font-family: Consolas, "Courier New", monospace;
-              font-size: 13px;
-              z-index: 1000;
+        block.style = `
+          display: inline-flex;
+          background-color: #222; 
+          color: #fff; 
+          padding: 5px;
+          border-radius: 5px;
+          font-family: Consolas, "Courier New", monospace;
+          font-size: 13px;
+          z-index: 1000;
           `;
       });
       
-      chatMessages.appendChild(aiMessageElem);
+    chatMessages.appendChild(aiMessageElem);
 
-       // Chỉ lưu tin nhắn từ AI nếu có tin nhắn mới từ người dùng
-      if (lastUserMessage.trim() !== "" || refresh_click) {
-      saveChatHistory(message, false); // Lưu vào localStorage
-      }
+    if (lastUserMessage.trim() !== "" || refresh_click) {
+      saveChatHistory(message, false);
+    }
       
-      // Tạo container cho nút copy và refresh
-      const buttonContainer = document.createElement('div');
+    //Tạo container cho nút copy và refresh.
+    const buttonContainer = document.createElement('div');
       buttonContainer.style = `
         display: flex;
         gap: 1px;
@@ -466,46 +465,44 @@
         z-index: 1000;
         `;
       
-      // Tạo nút copy
-      const copyButton = document.createElement('button');
-      copyButton.innerHTML = '<i class="fa fa-copy"></i>';
-      copyButton.style = `
-        background-color: #e8e8e8;
-        color: #696969;
-        border: none;
-        cursor: pointer;
-        padding: 5px 10px;
-        border-radius: 5px;
-        margin-top: 5px;
-        font-size: 12px;
-        font-family: Arial, sans-serif;
-        margin-left: 5px;
-        `;
+    //Tạo nút copy.
+    const copyButton = document.createElement('button');
+    copyButton.innerHTML = '<i class="fa fa-copy"></i>';
+    copyButton.style = `
+      background-color: #e8e8e8;
+      color: #696969;
+      border: none;
+      cursor: pointer;
+      padding: 5px 10px;
+      border-radius: 5px;
+      margin-top: 5px;
+      font-size: 12px;
+      font-family: Arial, sans-serif;
+      margin-left: 5px;
+      `;
       
-      copyButton.addEventListener('click', function () {
-        activateButton(copyButton);
-        const messageToCopy = aiMessageElem.innerText.trim();
-      
-        const textArea = document.createElement('textarea');
+    copyButton.addEventListener('click', function () {
+      activateButton(copyButton);
+      const messageToCopy = aiMessageElem.innerText.trim();     
+      const textArea = document.createElement('textarea');
         textArea.value = messageToCopy;
         textArea.style.position = 'fixed';  
         textArea.style.opacity = '0';
-        document.body.appendChild(textArea);
+      document.body.appendChild(textArea);
       
-        textArea.select();
-      
-        try {
-            document.execCommand('copy');
-        } catch (error) {
-            alert('An error occurred while copying. Try again.');
-        }
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (error) {
+        alert('An error occurred while copying. Try again.');
+      }
     
-        document.body.removeChild(textArea);
-      });
+      document.body.removeChild(textArea);
+    });
         
       
-      // Tạo nút refresh
-      const refreshButton = document.createElement('button');
+    //Tạo nút refresh.
+    const refreshButton = document.createElement('button');
       refreshButton.innerHTML = '<i class="fa fa-refresh"></i>';
       refreshButton.style = `
         background-color: #e8e8e8;
@@ -520,18 +517,18 @@
         margin-left: 5px;
         `;
       
-      refreshButton.addEventListener('click', function () {
-        refresh_click = true;
-        activateButton(refreshButton);
-        showLoader();
-        repeat();
-      });
+    refreshButton.addEventListener('click', function () {
+      refresh_click = true;
+      activateButton(refreshButton);
+      showLoader();
+      repeat();
+    });
       
-      buttonContainer.appendChild(copyButton);
-      buttonContainer.appendChild(refreshButton);
-      chatMessages.appendChild(buttonContainer);
+    buttonContainer.appendChild(copyButton);
+    buttonContainer.appendChild(refreshButton);
+    chatMessages.appendChild(buttonContainer);
 
-    // Thêm separator với visibility: hidden;
+    //Thêm gạch phân cách (ẩn).
     const separator = document.createElement('hr');
     separator.style =`
       border: none;
@@ -543,131 +540,129 @@
       `;
     chatMessages.appendChild(separator);
       
-      chatMessages.scrollTop = chatMessages.scrollHeight;
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 
-      hidePreviousRefreshButtons();
+    hidePreviousRefreshButtons();
 
-      // Hiển thị nút refresh cho tin nhắn hiện tại
-      refreshButton.style.display = 'inline-block';
-      refreshButton.style.pointerEvents = 'auto';
+    //Hiển thị nút refresh cho tin nhắn hiện tại.
+    refreshButton.style.display = 'inline-block';
+    refreshButton.style.pointerEvents = 'auto';
       
+    adjustChatboxHeight();
+  }
+      
+  //Custom cho scrollbar của chatbox.
+  const style = document.createElement('style');
+  style.innerHTML = `
+    #chatbox ::-webkit-scrollbar {
+      width: 12px;
+    }
+    #chatbox ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    #chatbox ::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 10px;
+    }
+    #chatbox ::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+    #chatbox {
+      scrollbar-width: thin;
+      scrollbar-color: #888 #f1f1f1;
+    }
+    `;
+  document.head.appendChild(style);
+      
+  //Hàm tự động điều chỉnh kích thước chatbox.
+  function adjustChatboxHeight() {
+    chatInput.style.height = '20px'; 
+    chatInput.style.height = chatInput.scrollHeight + 'px';
+    
+    const chatContentHeight = chatMessages.scrollHeight;
+    const chatInputHeight = chatInput.scrollHeight;
+    const chatInputWrapperHeight = chatInputWrapper.offsetHeight;
+    const chatHeaderHeight = chatHeader.offsetHeight;
+    const minChatboxHeight = 300; 
+    const maxChatboxHeight = window.innerHeight * 0.8; 
+    
+    const newChatboxHeight = Math.min(
+      Math.max(minChatboxHeight, chatContentHeight + chatInputWrapperHeight + chatHeaderHeight),
+      maxChatboxHeight
+    );
+    
+    chatbox.style.height = newChatboxHeight + 'px';
+    chatMessages.style.maxHeight = (newChatboxHeight - chatInputWrapperHeight - chatHeaderHeight) + 'px';
+  }
+
+  //Hàm reset kích thước chatbox.
+  function resetChatboxHeight() {
+    if (chatMessages.children.length === 1) {
+      chatbox.style.height = '300px'; 
+      chatMessages.style.maxHeight = '200px'; 
+    }
+    chatInput.style.height = '20px';
+  }
+    
+  chatInput.addEventListener('input', function () {
+    if (chatInput.value.trim() === '') {
+      resetChatboxHeight();
+    } else {
       adjustChatboxHeight();
     }
-      
-    // Thêm style cho scrollbar của chatbox
-    const style = document.createElement('style');
-    style.innerHTML = `
-      #chatbox ::-webkit-scrollbar {
-        width: 12px;
-      }
-      #chatbox ::-webkit-scrollbar-track {
-        background: #f1f1f1;
-      }
-      #chatbox ::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 10px;
-      }
-      #chatbox ::-webkit-scrollbar-thumb:hover {
-        background: #555;
-      }
-      #chatbox {
-        scrollbar-width: thin;
-        scrollbar-color: #888 #f1f1f1;
-      }
-      `;
-    document.head.appendChild(style);
-      
-    // Hàm tự động điều chỉnh kích thước chatbox
-    function adjustChatboxHeight() {
-      chatInput.style.height = '20px'; 
-      chatInput.style.height = chatInput.scrollHeight + 'px';
-    
-      const chatContentHeight = chatMessages.scrollHeight;
-      const chatInputHeight = chatInput.scrollHeight;
-      const chatInputWrapperHeight = chatInputWrapper.offsetHeight;
-      const chatHeaderHeight = chatHeader.offsetHeight;
-      const minChatboxHeight = 300; 
-      const maxChatboxHeight = window.innerHeight * 0.8; 
-    
-      const newChatboxHeight = Math.min(
-        Math.max(minChatboxHeight, chatContentHeight + chatInputWrapperHeight + chatHeaderHeight),
-        maxChatboxHeight
-      );
-    
-      chatbox.style.height = newChatboxHeight + 'px';
-      chatMessages.style.maxHeight = (newChatboxHeight - chatInputWrapperHeight - chatHeaderHeight) + 'px';
-    }
+  });
 
-    // Hàm reset kích thước chatbox
-    function resetChatboxHeight() {
-      if (chatMessages.children.length === 1) { // Chỉ còn ghi chú
-        chatbox.style.height = '300px'; 
-        chatMessages.style.maxHeight = '200px'; 
-      }
-      chatInput.style.height = '20px';
-    }
-    
-    chatInput.addEventListener('input', function () {
-      if (chatInput.value.trim() === '') {
-        resetChatboxHeight();
-      } else {
-        adjustChatboxHeight();
-      }
-    });
+  chatInput.addEventListener('focus', function () {
+    adjustChatboxHeight();
+  });
 
-    chatInput.addEventListener('focus', function () {
-      adjustChatboxHeight();
-    });
-
-    function repeat() {
-      // Tạo bản sao của chatHistory trước khi đảo ngược
-      const cloneChatHistory = [...chatHistory];
+  //Hàm refresh.
+  function repeat() {
+    // Tạo bản sao của chatHistory trước khi đảo ngược
+    const cloneChatHistory = [...chatHistory];
   
-      // Tìm tin nhắn gần nhất của người dùng
-      const lastUserMess = cloneChatHistory.reverse().find(msg => msg.isUserMessage);
+    // Tìm tin nhắn gần nhất của người dùng
+    const lastUserMess = cloneChatHistory.reverse().find(msg => msg.isUserMessage);
   
-      if (lastUserMess) {
-          // Tạo tin nhắn mới với câu hỏi bổ sung
-          const newMessage = lastUserMess.text + " Hãy trả lời lại câu hỏi này.";
+    if (lastUserMess) {
+      // Tạo tin nhắn mới với câu hỏi bổ sung
+      const newMessage = lastUserMess.text + " Hãy trả lời lại câu hỏi này.";
           
-          // Gọi hàm sendToServer với tin nhắn mới
-          sendToServer(userId, newMessage);
-      } else {
-          console.error("Không tìm thấy tin nhắn gần nhất từ người dùng.");
-          displayAIMessage("Không tìm thấy tin nhắn gần nhất để lặp lại.");
-      }
-  
+      sendToServer(userId, newMessage);
+    } else {
+      console.error("Không tìm thấy tin nhắn gần nhất từ người dùng.");
+      displayAIMessage("Không tìm thấy tin nhắn gần nhất để lặp lại.");
+    }
   }
   
 
-    // Hàm gửi dữ liệu tới server qua HTTP API
-    function sendToServer(userId, userMessage) {
-        const apiUrl = `http://35.238.176.124:8888/client_event?uid=${userId}`; // Đường dẫn API của bạn để gửi tin nhắn
+  //Hàm gửi tin nhắn đến server.
+  function sendToServer(userId, userMessage) {
+    const apiUrl = `http://35.238.176.124:8888/client_event?uid=${userId}`;
 
-        // Dữ liệu gửi đi
-        const data = {
-            data: userMessage
-        };
+    // Dữ liệu gửi đi
+    const data = {
+      data: userMessage
+    };
 
-        // Gửi yêu cầu POST với fetch
-        fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json' // Định dạng dữ liệu JSON
-            },
-            body: JSON.stringify(data) // Chuyển đổi dữ liệu thành chuỗi JSON
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Success:', data.message);
-            hideLoader();
-            displayAIMessage(data.message); // Hiển thị phản hồi từ AI (trả về từ server)
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-            hideLoader();
-            displayAIMessage("Error: Unable to send message. Please try again.");
-        });
-    }
-    restoreChatHistory();
-  });
+    fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Success:', data.message);
+      hideLoader();
+      displayAIMessage(data.message);
+    })
+    .catch((error) => {
+      console.error('Error:', error);
+      hideLoader();
+      displayAIMessage("Error: Unable to send message. Please try again.");
+    });
+  }
+  restoreChatHistory();
+});
